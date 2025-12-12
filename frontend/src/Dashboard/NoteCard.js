@@ -70,7 +70,7 @@ const NoteCard = ({ note = {}, onClick, isAddCard = false, isLoading, notebookId
     setActiveSection("notes");
   };
 
-  const plainText = stripHtml(note.content_html);
+  const plainText = note.content_html ? stripHtml(note.content_html) : "";
   const relativeTime = formatDistanceToNow(new Date(note.updated_at), {
     addSuffix: true,
   });
@@ -86,8 +86,10 @@ const NoteCard = ({ note = {}, onClick, isAddCard = false, isLoading, notebookId
           <div className="protected-icon"><FaLock /></div>
           <p className="protected-text">Protected Note - Click to view</p>
         </div>
-      ) : (
+      ) : plainText ? (
         <p className="note-content">{plainText}</p>
+      ) : (
+        <p className="note-content note-empty">No content yet</p>
       )}
       <div className="note-footer">
         <span className="note-date">{relativeTime}</span>

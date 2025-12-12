@@ -351,6 +351,11 @@
   -webkit-box-orient: vertical;
 }
 
+.note-content.note-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* Protected Note Content Styles */
 .note-protected-content {
   margin: 0 0 auto 0;
