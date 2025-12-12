@@ -58,6 +58,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "NotesBackend API is running" });
+});
+
 // Register routes
 app.use("/auth", authRoutes);
 app.use("/note", noteRoutes);
@@ -65,6 +70,7 @@ app.use("/user", profileRoutes);
 app.use("/tasks", tasksRoutes);
 app.use("/notebooks", notebooksRoutes);
 app.use("/note-actions", noteActionsRoutes);
+
 
 
 // Server port
