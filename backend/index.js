@@ -71,7 +71,11 @@ app.use("/tasks", tasksRoutes);
 app.use("/notebooks", notebooksRoutes);
 app.use("/note-actions", noteActionsRoutes);
 
-
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
 
 // Server port
 const PORT = process.env.PORT || 5000;
