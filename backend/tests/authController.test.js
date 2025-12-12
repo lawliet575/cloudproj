@@ -1,6 +1,6 @@
 const request = require("supertest");
 const sinon = require("sinon");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const app = require("../index"); // or wherever your Express app is exported
 const userModel = require("../models/userModel");
 const transporter = require("../mail");

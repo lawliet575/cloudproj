@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const userModel = require("../models/userModel");
 const generateToken = require("../utils/jwt");
 
@@ -122,10 +122,10 @@ const login = async (req, res) => {
   if (!user) {
     return res.status(401).json({ error: "Invalid credentials." });
   }
-  
+
   if (!user.is_verified) {
-  return res.status(403).json({ error: "Email not verified." });
-}
+    return res.status(403).json({ error: "Email not verified." });
+  }
 
   // 3. Compare password
   const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -137,7 +137,7 @@ const login = async (req, res) => {
 
   const token = generateToken(user.id);
 
-   logger.info({ userId: user.id }, "Login successful");
+  logger.info({ userId: user.id }, "Login successful");
 
   // 4. Login success
   res.status(200).json({
