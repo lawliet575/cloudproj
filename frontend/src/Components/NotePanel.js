@@ -34,11 +34,13 @@ const formatDate = (date) => {
 // Helper function to sort notes
 const sortNotes = (notes, sortOption) => {
   return [...notes].sort((a, b) => {
+    const aDate = a.updatedAt || a.updated_at;
+    const bDate = b.updatedAt || b.updated_at;
     switch (sortOption) {
       case "latest":
-        return new Date(b.updatedAt) - new Date(a.updatedAt);
+        return new Date(bDate) - new Date(aDate);
       case "oldest":
-        return new Date(a.updatedAt) - new Date(b.updatedAt);
+        return new Date(aDate) - new Date(bDate);
       case "a-z":
         return a.note_name.localeCompare(b.note_name);
       case "z-a":
@@ -283,15 +285,14 @@ function NotePanel() {
             </div>
           ) : (
             sortedNotes.map((note) => (
-              <div
-                key={note.id}
+              <div key={note.id}
                 className={`note-item slide-up ${selectedNoteId === note.id ? "active" : ""}`}
                 onClick={() => handleNoteContext(note)}
                 note_name={note.note_name}
               >
                 <div className="note-panel-item-title">{note.note_name}</div>
                 <div className="note-panel-date">
-                  {formatDate(note.updatedAt)}
+                  {formatDate(note.updatedAt || note.updated_at)}
                 </div>
               </div>
             ))
