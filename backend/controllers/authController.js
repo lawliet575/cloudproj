@@ -41,7 +41,8 @@ const signup = async (req, res) => {
     );
 
     // Send verification email
-    const verificationUrl = `http://localhost:5000/auth/verify/${token}`;
+    const verificationUrl = `https://notesbackend-ewd6eagpbufcc9b3.uaenorth-01.azurewebsites.net/auth/verify/${token}`;
+
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
