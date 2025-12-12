@@ -3,12 +3,14 @@ import "./styles.css";
 import { API_BASE_URL } from "../App/config";
 import { useAuth } from "../Authentication/AuthContext";
 import { useToast } from "../Components/Toast";
+import { FaChevronDown, FaClipboardList } from "react-icons/fa";
 
 const Header = ({ userName, viewMode, setViewMode }) => {
   const { token } = useAuth();
   const toast = useToast();
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedTasks, setExtractedTasks] = useState([]);
+  const [magicDropdownOpen, setMagicDropdownOpen] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState([]);
 
@@ -128,19 +130,42 @@ const Header = ({ userName, viewMode, setViewMode }) => {
         <h1 className="welcome-heading fade-in">{greeting} {userName}</h1>
         <div className="header-actions">
           {/* Magic Actions Dropdown */}
-          <select
-            className="magic-actions-dropdown-header"
-            value=""
-            onChange={(e) => {
-              const action = e.target.value;
-              if (action) handleMagicAction(action);
-              e.target.value = '';
-            }}
-            disabled={isExtracting}
-          >
-            <option value="">{isExtracting ? '⏳ Analyzing...' : '✨ Magic Actions'}</option>
-            <option value="extract-tasks">📋 Extract Tasks from Notes</option>
-          </select>
+          <div className="magic-actions-wrapper-header">
+            <button
+              className="magic-actions-dropdown-header"
+              onClick={() => setMagicDropdownOpen(!magicDropdownOpen)}
+              disabled={isExtracting}
+            >
+              {isExtracting ? (
+                '⏳ Analyzing...'
+              ) : (
+                <>
+                  ✨ Magic Actions
+                  <FaChevronDown className="dropdown-arrow" />
+                </>
+              )}
+            </button>
+            {magicDropdownOpen && (
+              <>
+                <div
+                  className="magic-dropdown-backdrop"
+                  onClick={() => setMagicDropdownOpen(false)}
+                />
+                <div className="magic-actions-menu-header">
+                  <button
+                    className="magic-action-item-header"
+                    onClick={() => {
+                      handleMagicAction('extract-tasks');
+                      setMagicDropdownOpen(false);
+                    }}
+                  >
+                    <FaClipboardList className="action-icon" />
+                    <span>Extract Tasks from Notes</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           {setViewMode && (
             <div className="view-toggle">

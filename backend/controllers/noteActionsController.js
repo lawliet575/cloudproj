@@ -360,10 +360,154 @@ const createTasks = async (req, res) => {
     }
 };
 
+/**
+ * Summarize note content
+ * Returns a concise summary of the note
+ */
+const summarizeNote = async (req, res) => {
+    const { noteId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        // Get note content
+        const note = await notesModel.LoadHTMLByNoteID(noteId, userId);
+        if (!note) {
+            return res.status(404).json({ error: "Note not found" });
+        }
+
+        if (note.is_protected) {
+            return res.status(400).json({ error: "Cannot summarize protected notes" });
+        }
+
+        // Strip HTML for analysis
+        const cleanContent = note.content_html
+            ? note.content_html.replace(/<[^>]*>/g, ' ').trim()
+            : "";
+
+        if (!cleanContent || cleanContent.length < 50) {
+            return res.status(400).json({ error: "Note content is too short to summarize" });
+        }
+
+        // Call Gemini to generate summary
+        const model = genAI.getGenerativeModel({
+            model: process.env.GEMINI_MODEL || "gemini-1.5-flash"
+        });
+
+        const prompt = `Summarize the following note content into a concise, well-organized summary. Preserve the key points and important information.
+
+Content:
+${cleanContent}
+
+Return ONLY valid HTML formatted content with proper tags (<p>, <ul>, <li>, <strong>, etc.).
+The summary should be:
+- Concise but comprehensive
+- Well-structured with headings if appropriate
+- Preserve important facts, numbers, and action items
+- Use bullet points for lists of items
+- Typically 30-50% of the original length
+
+Do NOT include any JSON wrapping or explanatory text, just return the HTML content directly.`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        // Clean up the response (remove markdown code blocks if present)
+        let summaryHTML = responseText.trim();
+        summaryHTML = summaryHTML.replace(/^```html\n?/i, '').replace(/\n?```$/, '');
+        summaryHTML = summaryHTML.trim();
+
+        // Ensure we have some content
+        if (!summaryHTML || summaryHTML.length < 10) {
+            return res.status(500).json({ error: "Failed to generate summary" });
+        }
+
+        logger.info({ userId, noteId, originalLength: cleanContent.length, summaryLength: summaryHTML.length }, "Generated note summary");
+        res.status(200).json({ summary: summaryHTML });
+
+    } catch (err) {
+        logger.error({ err, userId, noteId }, "Error summarizing note");
+        res.status(500).json({ error: "Failed to summarize note" });
+    }
+};
+
+/**
+ * Fix typo and grammar errors in note content
+ * Returns corrected content
+ */
+const fixTypoGrammar = async (req, res) => {
+    const { noteId } = req.params;
+    const userId = req.user.userId;
+
+    try {
+        // Get note content
+        const note = await notesModel.LoadHTMLByNoteID(noteId, userId);
+        if (!note) {
+            return res.status(404).json({ error: "Note not found" });
+        }
+
+        if (note.is_protected) {
+            return res.status(400).json({ error: "Cannot fix protected notes" });
+        }
+
+        // Strip HTML for analysis
+        const cleanContent = note.content_html
+            ? note.content_html.replace(/<[^>]*>/g, ' ').trim()
+            : "";
+
+        if (!cleanContent || cleanContent.length < 5) {
+            return res.status(400).json({ error: "Note content is too short to fix" });
+        }
+
+        // Call Gemini to fix typos and grammar
+        const model = genAI.getGenerativeModel({
+            model: process.env.GEMINI_MODEL || "gemini-1.5-flash"
+        });
+
+        const prompt = `Fix all spelling errors, typos, and grammar mistakes in the following text. Preserve the original meaning, tone, and formatting structure.
+
+Content:
+${cleanContent}
+
+Return ONLY valid HTML formatted content with proper tags (<p>, <ul>, <li>, <strong>, etc.).
+Rules:
+- Fix spelling errors and typos
+- Correct grammar mistakes
+- Improve punctuation where needed
+- Preserve the original meaning and tone
+- Keep the same structure and organization
+- Do NOT rephrase or summarize - only fix errors
+- Maintain all facts, numbers, and important details exactly as they are
+
+Do NOT include any JSON wrapping or explanatory text, just return the corrected HTML content directly.`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        // Clean up the response (remove markdown code blocks if present)
+        let correctedHTML = responseText.trim();
+        correctedHTML = correctedHTML.replace(/^```html\n?/i, '').replace(/\n?```$/, '');
+        correctedHTML = correctedHTML.trim();
+
+        // Ensure we have some content
+        if (!correctedHTML || correctedHTML.length < 5) {
+            return res.status(500).json({ error: "Failed to fix content" });
+        }
+
+        logger.info({ userId, noteId }, "Fixed typo and grammar in note");
+        res.status(200).json({ correctedContent: correctedHTML });
+
+    } catch (err) {
+        logger.error({ err, userId, noteId }, "Error fixing typo/grammar");
+        res.status(500).json({ error: "Failed to fix typo and grammar" });
+    }
+};
+
 module.exports = {
     getHighlightSuggestions,
     divideNote,
     extractTasks,
     createTasks,
+    summarizeNote,
+    fixTypoGrammar,
 };
 

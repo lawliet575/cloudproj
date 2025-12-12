@@ -9,7 +9,7 @@ import { useConfirm } from "../Components/ConfirmModal";
 import { API_BASE_URL } from "../App/config";
 import SettingsModule from "./SettingsModule";
 import EditableHeading from "./EditableHeading";
-import { FaLock, FaLockOpen } from "react-icons/fa";
+import { FaLock, FaLockOpen, FaHighlighter, FaFileAlt, FaSpellCheck, FaObjectGroup, FaChevronDown } from "react-icons/fa";
 import "./TextEditor.css";
 
 const TextEditor = () => {
@@ -23,6 +23,9 @@ const TextEditor = () => {
   const [currentNotebookId, setCurrentNotebookId] = useState(null);
   const [isHighlighting, setIsHighlighting] = useState(false);
   const [isDividing, setIsDividing] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
+  const [magicDropdownOpen, setMagicDropdownOpen] = useState(false);
 
 
   const { token } = useAuth();
@@ -533,6 +536,96 @@ const TextEditor = () => {
     }
   };
 
+  // AI Action: Summarize note
+  const handleSummarize = async () => {
+    if (!selectedNoteId || isProtected || isSummarizing) return;
+
+    setIsSummarizing(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/note-actions/summarize/${selectedNoteId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.summary) {
+        // Strip HTML for preview (show plain text)
+        const summaryPreview = data.summary.replace(/<[^>]*>/g, ' ').trim().substring(0, 300);
+        const previewText = summaryPreview.length < data.summary.replace(/<[^>]*>/g, ' ').trim().length
+          ? summaryPreview + '...'
+          : summaryPreview;
+
+        // Show confirmation modal with summary preview
+        const confirmed = await confirm({
+          title: 'Replace with Summary?',
+          message: `Preview of summary:\n\n"${previewText}"\n\nReplace the current note content with this AI-generated summary? This action cannot be undone.`,
+          confirmText: 'Replace',
+          type: 'warning'
+        });
+
+        if (confirmed) {
+          // Replace content in Quill editor
+          const quill = quillInstance.current;
+          if (quill) {
+            quill.root.innerHTML = data.summary;
+            toast.success('✨ Note summarized successfully!');
+          }
+        }
+      } else {
+        toast.error(data.error || "Failed to summarize note");
+      }
+    } catch (err) {
+      console.error("Error summarizing note:", err);
+      toast.error("Error summarizing note");
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  // AI Action: Fix typo and grammar
+  const handleFixTypo = async () => {
+    if (!selectedNoteId || isProtected || isFixing) return;
+
+    setIsFixing(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/note-actions/fix-typo/${selectedNoteId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.correctedContent) {
+        // Replace content in Quill editor
+        const quill = quillInstance.current;
+        if (quill) {
+          quill.root.innerHTML = data.correctedContent;
+          toast.success('✨ Typos and grammar fixed!');
+        }
+      } else {
+        toast.error(data.error || "Failed to fix typo and grammar");
+      }
+    } catch (err) {
+      console.error("Error fixing typo/grammar:", err);
+      toast.error("Error fixing typo and grammar");
+    } finally {
+      setIsFixing(false);
+    }
+  };
+
   // autosave on every keystroke
   useEffect(
     () => {
@@ -591,22 +684,73 @@ const TextEditor = () => {
             </button>
           )}
           {selectedNoteId && !isProtected && (
-            <select
-              className="magic-actions-dropdown"
-              value=""
-              onChange={(e) => {
-                const action = e.target.value;
-                if (action === 'highlight') handleHighlight();
-                else if (action === 'divide') handleDivide();
-                e.target.value = '';
-              }}
-              disabled={isHighlighting || isDividing}
-              title="AI-powered actions for this note"
-            >
-              <option value="">{isHighlighting || isDividing ? 'Processing...' : 'Magic Actions'}</option>
-              <option value="highlight">Highlight Key Points</option>
-              <option value="divide">Divide into Notes</option>
-            </select>
+            <div className="magic-actions-wrapper">
+              <button
+                className="magic-actions-button"
+                onClick={() => setMagicDropdownOpen(!magicDropdownOpen)}
+                disabled={isHighlighting || isDividing || isSummarizing || isFixing}
+                title="AI-powered actions for this note"
+              >
+                {isHighlighting || isDividing || isSummarizing || isFixing ? (
+                  '⏳ Processing...'
+                ) : (
+                  <>
+                    ✨ Magic Actions
+                    <FaChevronDown className="dropdown-arrow" />
+                  </>
+                )}
+              </button>
+              {magicDropdownOpen && (
+                <>
+                  <div
+                    className="magic-dropdown-backdrop"
+                    onClick={() => setMagicDropdownOpen(false)}
+                  />
+                  <div className="magic-actions-menu">
+                    <button
+                      className="magic-action-item"
+                      onClick={() => {
+                        handleHighlight();
+                        setMagicDropdownOpen(false);
+                      }}
+                    >
+                      <FaHighlighter className="action-icon" />
+                      <span>Highlight Key Points</span>
+                    </button>
+                    <button
+                      className="magic-action-item"
+                      onClick={() => {
+                        handleSummarize();
+                        setMagicDropdownOpen(false);
+                      }}
+                    >
+                      <FaFileAlt className="action-icon" />
+                      <span>Summarize Note</span>
+                    </button>
+                    <button
+                      className="magic-action-item"
+                      onClick={() => {
+                        handleFixTypo();
+                        setMagicDropdownOpen(false);
+                      }}
+                    >
+                      <FaSpellCheck className="action-icon" />
+                      <span>Fix Typo & Grammar</span>
+                    </button>
+                    <button
+                      className="magic-action-item"
+                      onClick={() => {
+                        handleDivide();
+                        setMagicDropdownOpen(false);
+                      }}
+                    >
+                      <FaObjectGroup className="action-icon" />
+                      <span>Divide into Notes</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

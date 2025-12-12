@@ -9,6 +9,12 @@ router.post("/highlight/:noteId", verifyToken, noteActionsController.getHighligh
 // Divide a note into multiple notes
 router.post("/divide/:noteId", verifyToken, noteActionsController.divideNote);
 
+// Summarize note content
+router.post("/summarize/:noteId", verifyToken, noteActionsController.summarizeNote);
+
+// Fix typo and grammar errors
+router.post("/fix-typo/:noteId", verifyToken, noteActionsController.fixTypoGrammar);
+
 // Extract tasks from all notes
 router.post("/extract-tasks", verifyToken, noteActionsController.extractTasks);
 
